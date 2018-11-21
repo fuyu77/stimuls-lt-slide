@@ -8,6 +8,7 @@
 
 		<link rel="stylesheet" href="css/reveal.css">
 		<link rel="stylesheet" href="css/theme/black.css">
+		<link rel="stylesheet" href="css/custom.css">
 
 		<!-- Theme used for syntax highlighting of code -->
 		<link rel="stylesheet" href="lib/css/zenburn.css">
@@ -24,8 +25,227 @@
 	<body>
 		<div class="reveal">
 			<div class="slides">
-				<section>Slide 1</section>
-				<section>Slide 2</section>
+				<section>
+					<h1>
+						RailsとStimulusで<br>簡単フロント開発
+					</h1>
+					<p>
+						Kosuke Adachi<br>
+						@fuyu77<br>
+						2018.11.22 Meguro.rb#21
+					</p>
+				</section>
+				<section>
+					<div class="left">
+						<h4>自己紹介</h4>
+						<ul>
+							<li>前職はプログラミンしないSE<br>→退職してRailsを勉強<br>→2018年7月にCaSy入社</li>
+							<li>大学の専攻は国文学（短歌）</li>
+							<li>無職期間にRailsで<a href="https://utakatanka.jp">短歌投稿サイトUtakata</a>をリリース</li>
+						</ul>
+					</div>
+					<div class="right">
+						<img src="img/utakata.jpg" width="75%">
+					</div>
+				</section>
+				<section>
+          <h3>やりたいこと</h3>
+          <p>個人開発の既存のRailsプロダクトに<br>JSフレームワークを入れたい</p>
+				</section>
+				<section>
+					<h3>ReactやVue.jsは設計が難しい…</h3>
+					<ul>
+						<li>状態管理は？</li>
+						<li>ルーティングは？</li>
+						<li>SPAにするか、Turbolinksを活用するか？</li>
+						<li>既存コードとの整合性は？</li>
+					</ul>
+				</section>
+				<section>
+						<h3>試行錯誤の結果…</h3>
+					<div class="left">
+						<img src="img/utakata.jpg" width="60%"><br>
+						Vue.js導入前
+					</div>
+				  <div class="right">
+						<img src="img/hello.jpg" width="60%"><br>
+						Vue.js導入後
+					</div>
+				</section>
+				<section>
+					<h1>つらい</h1>
+				</section>
+				<section>
+					<h1>Stimulusの発見</h1>
+				</section>
+				<section>
+					<h3>Stimulusとは</h3>
+					<ul>
+						<li>DHHがCTOを務めるBasecampが開発</li>
+						<li>Turbolinksに対応<br>（Turbolinks作者のsstephensonが開発を主導）</li>
+						<li>モダンJSフレームワークの多くがサーバーから取得したJSONを元にHTMLを構築することを主眼とするのに対し、Stimulusはサーバーが用意したHTMLを操作することを主眼とする</li>
+					</ul>
+				</section>
+				<section>
+					<h3>既存のRailsアプリへのStimulusの導入</h3>
+					<ol>
+						<li>yarnとwebpackerをインストール</li>
+						<li><code>$ rails webpacker:install:stimulus</code></li>
+						<li><code><%= javascript_pack_tag 'application' %></code>をHTMLのheadタグ内に追加</li>
+					</ol>
+				</section>
+				<section>
+					<h3>Stimulusの基本三要素</h3>
+					<ul>
+						<li>data-controller：controller名を指定する</li>
+						<li>data-target：操作したい要素を指名する<br><code>controller.target</code></li>
+						<li>data-action：イベントと起動するメソッド名を指定する<br><code>event->contoroller#method</code></li>
+					</ul>
+				</section>
+				<section>
+					<h3>Hello, World!</h3>
+					<pre>html<code data-trim>
+						<div data-controller="hello">
+							<input data-target="hello.name" type="text">
+							<button data-action="click->hello#greet">Greet</button>
+							<div data-target="hello.output"></div>
+						</div>
+					</code></pre>
+					<pre>hello_controller.js<code data-trim>
+						import { Controller } from "stimulus"
+
+						export default class extends Controller {
+							static targets = [ "name", "output" ]
+
+							greet() {
+								this.outputTarget.textContent = `Hello, ${this.nameTarget.value}!`
+							}
+						}
+					</code></pre>
+				</section>
+				<section>
+					<h3>Lifecycle Callbacks</h3>
+					<ul>
+						<li>initialize()：最初に1回だけ呼び出される</li>
+						<li>connect()：controllerとDOMが接続する度に呼び出される</li>
+						<li>disconnect()：controllerとDOMが切断される度に呼び出される</li>
+					</ul>
+				</section>
+				<section>
+					<h3>実行順序</h3>
+					<pre>html<code data-trim>
+						<div id="hello" data-controller="hello"></div>
+					</code></pre>
+					<pre>hello_controller.js<code data-trim>
+						import { Controller } from "stimulus"
+
+						export default class extends Controller {
+						
+							initialize() {
+								console.log("initialize")
+								// initialize
+								// connect
+								const element = document.getElementById("post")
+								element.remove()
+								// disconnect
+								document.body.appendChild(element)
+								//connect
+							}
+						
+							connect() {
+								console.log("connect")
+							}
+							
+							disconnect() {
+								console.log("disconnect")
+							}
+						}	
+					</code></pre>
+				</section>
+        <section>
+					<h3>Data APIで状態管理</h3>
+					<pre>html<code data-trim>
+						<div data-controller="hello" data-hello-index="value"></div>
+					</code></pre>
+					<ul>
+						<li>this.data.has("index")：controllerの要素が<code>data-hello-index</code>を持っていたらtrue, 持っていなかったらfalse</li>
+						<li>this.data.get("index")：<code>data-hello-index</code>の値をString型で返す</li>
+						<li>this.data.set("index", index)：<code>data-hello-index</code>に値をセットする</li>
+					</ul>
+				</section>
+				<section>
+					<h3>スライドショー</h3>
+					<pre>html<code data-trim>
+						<div data-controller="slideshow" data-slideshow-index="0">
+							<button data-action="slideshow#previous">←</button>
+							<button data-action="slideshow#next">→</button>
+						
+							<div data-target="slideshow.slide" class="slide">🐵</div>
+							<div data-target="slideshow.slide" class="slide">🙈</div>
+							<div data-target="slideshow.slide" class="slide">🙉</div>
+							<div data-target="slideshow.slide" class="slide">🙊</div>
+						</div>
+					</code></pre>
+					<pre>css<code data-trim>
+						.slide {
+							display: none;
+						}
+						
+						.slide.slide--current {
+							display: block;
+						}
+					</code></pre>
+				</section>
+				<section>
+					<pre>slideshow_controller.js<code data-trim>
+						import { Controller } from "stimulus"
+
+						export default class extends Controller {
+							static targets = [ "slide" ]
+						
+							initialize() {
+								this.showCurrentSlide()
+							}
+						
+							next() {
+								this.index++
+							}
+						
+							previous() {
+								this.index--
+							}
+						
+							showCurrentSlide() {
+								this.slideTargets.forEach((el, i) => {
+									el.classList.toggle("slide--current", this.index == i)
+								})
+							}
+						
+							get index() {
+								return parseInt(this.data.get("index"))
+							}
+						
+							set index(value) {
+								this.data.set("index", value)
+								this.showCurrentSlide()
+							}
+						}
+					</code></pre>
+				</section>
+				<section>
+					<h3>まとめ</h3>
+					<ul>
+						<li>個人開発の小規模Railsプロダクトとの相性はバッチリ！</li>
+						<li>Controller単位でJSを整理できるので見通しが良さそう</li>
+						<li>ビジネスで使うには低機能過ぎるか…？</li>
+					</ul>
+				</section>
+				<section>
+					<h3>疑問点</h3>
+					<ul>
+						<li><code>connect()</code>と<code>disconnect()</code>が具体的にどう役立つのかつかめなかった</li>
+					</ul>
+				</section>
 			</div>
 		</div>
 
